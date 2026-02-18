@@ -1,176 +1,223 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>Neo WebOS</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-:root{
-  --accent:#22c55e;
-  --dark:#0f0f0f;
-  --gray:#1e1e1e;
-  --lightgray:#2a2a2a;
-  --text:#e5e7eb;
-}
-*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}
-body,html{width:100%;height:100%;overflow:hidden;background:var(--dark);color:var(--text)}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCSearch - Video Browser</title>
+    <style>
+        :root { --bg: #f9f9f9; --card: #fff; --border: #e4e6ea; --text: #0f0f0f; --sub: #606060; --accent: #ff0000; }
+        body { margin: 0; background: var(--bg); font-family: "Roboto", "Arial", sans-serif; color: var(--text); }
+        
+        /* Layout */
+        .topbar { position: sticky; top: 0; background: #fff; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; z-index: 100; }
+        .logo { font-weight: 700; font-size: 22px; cursor: pointer; letter-spacing: -1px; }
+        .search-container { flex: 0 1 600px; display: flex; align-items: center; }
+        .search-container input { width: 100%; padding: 10px 16px; border-radius: 20px 0 0 20px; border: 1px solid var(--border); outline: none; font-size: 16px; }
+        .search-container button { border-radius: 0 20px 20px 0; border: 1px solid var(--border); border-left: none; background: #f8f8f8; padding: 10px 20px; cursor: pointer; }
+        
+        .layout { display: grid; grid-template-columns: 240px 1fr; }
+        .sidebar { background: #fff; height: calc(100vh - 56px); position: sticky; top: 56px; padding: 12px; overflow-y: auto; }
+        .sideitem { padding: 12px; border-radius: 10px; margin-bottom: 4px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 12px; }
+        .sideitem:hover { background: #f2f2f2; }
+        .sideitem.active { background: #e5e5e5; font-weight: bold; }
 
-/* 背景 */
-#desktop{
-  width:100%;height:100%;position:relative;
-  background:
-    radial-gradient(circle at 20% 30%, #1f2937 0%, transparent 40%),
-    radial-gradient(circle at 80% 70%, #064e3b 0%, transparent 40%),
-    linear-gradient(120deg,#0f0f0f,#1e1e1e);
-}
+        .content { padding: 24px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        
+        /* Components */
+        .card { background: none; border: none; cursor: pointer; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-2px); }
+        .card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 12px; background: #eee; }
+        .card-info { margin-top: 10px; }
+        .card-title { font-weight: 600; font-size: 14px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .card-meta { font-size: 12px; color: var(--sub); margin-top: 4px; }
 
-/* ウィンドウ */
-.window{
-  width:520px;height:360px;background:var(--gray);
-  border:1px solid #2f2f2f;border-radius:12px;
-  position:absolute;top:100px;left:180px;
-  box-shadow:0 20px 60px rgba(0,0,0,.6);
-  display:none;flex-direction:column;overflow:hidden;
-}
-.titlebar{
-  background:var(--lightgray);padding:10px;
-  display:flex;justify-content:space-between;align-items:center;
-  border-bottom:1px solid #333;cursor:move;
-}
-.content{flex:1;padding:15px;overflow:auto}
-
-/* タスクバー */
-#taskbar{
-  position:absolute;bottom:0;width:100%;height:48px;
-  background:rgba(30,30,30,.75);backdrop-filter:blur(12px);
-  display:flex;align-items:center;padding:0 12px;border-top:1px solid #2a2a2a;
-}
-.start{width:36px;height:36px;border-radius:8px;background:var(--lightgray);cursor:pointer}
-.widgets-btn{margin-left:auto;padding:6px 12px;background:var(--lightgray);
-  border:1px solid #333;border-radius:8px;cursor:pointer;color:var(--accent)}
-
-/* スタートメニュー */
-#startMenu{
-  position:absolute;bottom:60px;left:12px;width:260px;
-  background:#1b1b1b;border:1px solid #333;border-radius:12px;
-  padding:15px;display:none;
-}
-.start-item{padding:8px;border-radius:6px;cursor:pointer}
-.start-item:hover{background:#2a2a2a}
-
-/* ウィジェット */
-#widgets{
-  position:absolute;right:-360px;top:0;width:360px;height:100%;
-  background:rgba(20,20,20,.95);backdrop-filter:blur(20px);
-  border-left:1px solid #333;padding:15px;transition:.4s;overflow-y:auto;
-}
-#widgets.open{right:0}
-.widget-section{margin-bottom:20px}
-.widget-section h3{color:var(--accent);margin-bottom:10px;font-size:16px;border-bottom:1px solid #333;padding-bottom:5px}
-.news-item{font-size:13px;margin-bottom:8px;cursor:pointer;border-bottom:1px solid #2a2a2a;padding-bottom:6px}
-.weather-item{font-size:14px;margin-bottom:6px}
-</style>
+        /* Watch Page */
+        .watch { display: grid; grid-template-columns: 1fr 350px; gap: 24px; max-width: 1400px; margin: 0 auto; }
+        .player-container { width: 100%; }
+        .player-wrapper { position: relative; padding-top: 56.25%; background: #000; border-radius: 12px; overflow: hidden; }
+        .player-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+        
+        @media (max-width: 1000px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .watch { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
 
-<div id="desktop">
-
-  <!-- ニュース表示用ウィンドウ -->
-  <div class="window" id="newsWindow">
-    <div class="titlebar">ニュース</div>
-    <div class="content" id="newsContent">記事を読み込み中...</div>
-  </div>
-
-  <div id="taskbar">
-    <div class="start" onclick="toggleStart()"></div>
-    <div class="widgets-btn" onclick="toggleWidgets()">ニュース・天気</div>
-  </div>
-
-  <div id="startMenu">
-    <div class="start-item" onclick="openWidgets()">📰 ニュース・天気</div>
-    <div class="start-item" onclick="alert('設定はまだ未実装')">⚙ 設定</div>
-  </div>
-
-  <div id="widgets">
-    <div class="widget-section">
-      <h3>🌤 天気</h3>
-      <div id="weather">取得中...</div>
+<div class="topbar">
+    <div class="logo" onclick="location.hash='';">MC<span style="color:var(--accent)">Tube</span></div>
+    <div class="search-container">
+        <input id="q" placeholder="検索" onkeypress="if(event.key==='Enter')search()">
+        <button onclick="search()">🔍</button>
     </div>
-    <div class="widget-section">
-      <h3>📰 ニュース</h3>
-      <div id="news">取得中...</div>
-    </div>
-  </div>
+    <div style="width: 40px;"></div>
+</div>
 
+<div class="layout">
+    <div class="sidebar">
+        <div class="sideitem active" id="menu-home" onclick="location.hash=''; updateMenu(this)">🏠 ホーム</div>
+        <div class="sideitem" id="menu-history" onclick="showHistoryPage(); updateMenu(this)">⏳ 履歴</div>
+    </div>
+    <div class="content" id="app">
+        </div>
 </div>
 
 <script>
-/* UIトグル */
-function toggleWidgets(){document.getElementById("widgets").classList.toggle("open")}
-function toggleStart(){startMenu.style.display=startMenu.style.display==="block"?"none":"block"}
-function openWidgets(){document.getElementById("widgets").classList.add("open");toggleStart()}
+// --- 設定 ---
+const API_KEY = "AIzaSyARTqbVFa9iHvXlyHlDZVtpyfO4kxz6_yU"; // ※取得したAPIキーを入力してください
 
-/* ===== 地域コード自動取得 ===== */
-async function getLocalCode(){
-  return new Promise(resolve=>{
-    navigator.geolocation.getCurrentPosition(async pos=>{
-      const {latitude,longitude}=pos.coords;
-      const res=await fetch(`https://geocoding-api.open-meteo.com/v1/reverse?latitude=${latitude}&longitude=${longitude}&language=ja`);
-      const data=await res.json();
-      const pref=data.results[0].admin1;
-      const map={
-        "東京都":"130000","大阪府":"270000","北海道":"016000",
-        "愛知県":"230000","福岡県":"400000"
-      };
-      resolve(map[pref]||"130000");
-    },()=>resolve("130000"));
-  });
+// --- ルーター ---
+window.addEventListener('hashchange', router);
+window.addEventListener('load', router);
+
+function router() {
+    const h = location.hash;
+    const app = document.getElementById('app');
+    
+    if (h.startsWith('#watch=')) {
+        openWatch(h.split('=')[1]);
+    } else if (h.startsWith('#channel=')) {
+        openChannel(h.split('=')[1]);
+    } else {
+        openHome();
+    }
 }
 
-/* ===== 天気取得 ===== */
-async function loadWeather(){
-  const code=await getLocalCode();
-  const res=await fetch(`https://www.jma.go.jp/bosai/forecast/data/forecast/${code}.json`);
-  const data=await res.json();
-  const area=data[0].timeSeries[0].areas[0];
-  weather.innerHTML=`
-    <div class="weather-item">${area.area.name}</div>
-    <div class="weather-item">今日: ${area.weathers[0]}</div>
-    <div class="weather-item">明日: ${area.weathers[1]}</div>`;
+// --- 機能関数 ---
+function updateMenu(el) {
+    document.querySelectorAll('.sideitem').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
 }
 
-/* ===== ニュース取得 ===== */
-async function loadNews(){
-  const rss="https://www3.nhk.or.jp/rss/news/cat0.xml";
-  const url="https://api.allorigins.win/raw?url="+encodeURIComponent(rss);
-  const res=await fetch(url);
-  const text=await res.text();
-  const xml=new DOMParser().parseFromString(text,"text/xml");
-  const items=[...xml.querySelectorAll("item")].slice(0,5);
-  news.innerHTML="";
-  items.forEach(i=>{
-    const title=i.querySelector("title").textContent;
-    const link=i.querySelector("link").textContent;
-    const div=document.createElement("div");
-    div.className="news-item";
-    div.textContent="・"+title;
-    div.onclick=()=>openNews(link);
-    news.appendChild(div);
-  });
+async function search() {
+    const q = document.getElementById('q').value;
+    if (!q) return;
+    
+    location.hash = ''; // ホームへ移動
+    const app = document.getElementById('app');
+    app.innerHTML = '<div class="grid" id="results">読み込み中...</div>';
+
+    try {
+        const r = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=20&q=${encodeURIComponent(q)}&key=${API_KEY}`);
+        const d = await r.json();
+        renderVideoGrid(d.items, 'results');
+    } catch (e) {
+        app.innerHTML = 'エラーが発生しました。APIキーを確認してください。';
+    }
 }
 
-/* ===== ニュースをウィンドウ表示 ===== */
-function openNews(url){
-  const win=document.getElementById("newsWindow");
-  win.style.display="flex";
-  newsContent.innerHTML=`<iframe src="${url}" style="width:100%;height:100%;border:none"></iframe>`;
+function renderVideoGrid(items, targetId) {
+    const box = document.getElementById(targetId);
+    if (!items || items.length === 0) { box.innerHTML = "結果が見つかりませんでした。"; return; }
+    
+    box.innerHTML = items.map(v => `
+        <div class="card" onclick="location.hash='#watch=${v.id.videoId || v.id}'">
+            <img src="${v.snippet.thumbnails.medium.url}" alt="thumbnail">
+            <div class="card-info">
+                <div class="card-title">${escapeHtml(v.snippet.title)}</div>
+                <div class="card-meta">${v.snippet.channelTitle}</div>
+            </div>
+        </div>
+    `).join('');
 }
 
-/* ===== 10分ごと更新 ===== */
-loadWeather(); loadNews();
-setInterval(loadWeather,600000);
-setInterval(loadNews,600000);
+function openHome() {
+    document.getElementById('app').innerHTML = '<h2>おすすめ</h2><div class="grid" id="results">検索バーから動画を探してみましょう！</div>';
+}
+
+async function openWatch(id) {
+    const app = document.getElementById('app');
+    app.innerHTML = `
+        <div class="watch">
+            <div class="player-container">
+                <div class="player-wrapper">
+                    <iframe src="https://www.youtube.com/embed/${id}?autoplay=1" allowfullscreen></iframe>
+                </div>
+                <h2 id="v-title">読み込み中...</h2>
+                <div id="v-channel" class="meta"></div>
+                <hr>
+                <div class="comments">
+                    <h4>コメント</h4>
+                    <textarea id="commentText" style="width:100%; height:60px; border-radius:8px; padding:8px;" placeholder="公開コメントを入力..."></textarea>
+                    <button onclick="postComment('${id}')" style="margin-top:8px; padding:8px 16px; border-radius:18px; border:none; background:#065fd4; color:#fff; cursor:pointer;">コメント</button>
+                    <div id="commentList" style="margin-top:20px;"></div>
+                </div>
+            </div>
+            <div class="related" id="related"></div>
+        </div>`;
+
+    try {
+        const r = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${id}&key=${API_KEY}`);
+        const d = await r.json();
+        const v = d.items[0];
+        document.getElementById('v-title').textContent = v.snippet.title;
+        document.getElementById('v-channel').innerHTML = `<strong>${v.snippet.channelTitle}</strong>`;
+        
+        saveHistory(id, v.snippet);
+        loadRelated(id);
+        loadComments(id);
+    } catch (e) {
+        console.error("Video load failed", e);
+    }
+}
+
+function saveHistory(id, s) {
+    let h = JSON.parse(localStorage.getItem('history') || '[]');
+    h = h.filter(v => v.id !== id);
+    h.unshift({ id, title: s.title, thumb: s.thumbnails.medium.url });
+    localStorage.setItem('history', JSON.stringify(h.slice(0, 40)));
+}
+
+function showHistoryPage() {
+    location.hash = '#history';
+    const h = JSON.parse(localStorage.getItem('history') || '[]');
+    const app = document.getElementById('app');
+    app.innerHTML = '<h2>視聴履歴</h2><div class="grid" id="his"></div>';
+    renderVideoGrid(h.map(item => ({ id: item.id, snippet: { title: item.title, thumbnails: { medium: { url: item.thumb } }, channelTitle: '履歴から' } })), 'his');
+}
+
+function postComment(id) {
+    const t = document.getElementById('commentText').value.trim();
+    if (!t) return;
+    const k = 'c_' + id;
+    const l = JSON.parse(localStorage.getItem(k) || '[]');
+    l.unshift({ text: t, date: new Date().toLocaleString() });
+    localStorage.setItem(k, JSON.stringify(l));
+    document.getElementById('commentText').value = '';
+    loadComments(id);
+}
+
+function loadComments(id) {
+    const l = JSON.parse(localStorage.getItem('c_' + id) || '[]');
+    document.getElementById('commentList').innerHTML = l.map(c => `
+        <div style="margin-bottom:12px; font-size:14px; border-bottom:1px solid #eee; padding-bottom:8px;">
+            <div style="color:var(--sub); font-size:11px;">ユーザー • ${c.date || ''}</div>
+            <div style="margin-top:4px;">${escapeHtml(c.text)}</div>
+        </div>
+    `).join('');
+}
+
+async function loadRelated(id) {
+    // 注: YouTube APIの仕様変更により関連動画(relatedToVideoId)は制限される場合があります
+    const r = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&key=${API_KEY}`);
+    const d = await r.json();
+    const box = document.getElementById('related');
+    box.innerHTML = '<h4>次の動画</h4>' + d.items.map(v => `
+        <div style="display:flex; gap:8px; margin-bottom:12px; cursor:pointer;" onclick="location.hash='#watch=${v.id.videoId}'">
+            <img src="${v.snippet.thumbnails.medium.url}" style="width:140px; border-radius:8px;">
+            <div style="font-size:12px; font-weight:bold; overflow:hidden;">${escapeHtml(v.snippet.title)}</div>
+        </div>
+    `).join('');
+}
+
+function escapeHtml(str) {
+    const p = document.createElement('p');
+    p.textContent = str;
+    return p.innerHTML;
+}
 </script>
-
 </body>
 </html>
